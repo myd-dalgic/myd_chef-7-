@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VR Kahve Köşesi - NPC Sürüm</title>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.5.4/dist/aframe-extras.min.js"></script>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #111827; }
+    #hud {
+      position: fixed; top: 12px; left: 12px; width: 380px; z-index: 20;
+      background: rgba(2,6,23,.84); color: #fff; padding: 14px 16px; border-radius: 14px;
+      box-shadow: 0 18px 40px rgba(0,0,0,.35); backdrop-filter: blur(4px); line-height: 1.5;
+    }
+    #hud h1 { margin: 0 0 8px; font-size: 21px; }
+    #hud small { color: #cbd5e1; }
+    .pill {
+      display: inline-block; padding: 4px 9px; border-radius: 999px; background: #1e293b;
+      margin: 5px 6px 0 0; font-size: 12px; border: 1px solid rgba(255,255,255,.08);
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <h1>VR Kahve Köşesi</h1>
+    <div id="hudCustomer">Müşteri: bekleniyor...</div>
+    <div id="hudOrder">Sipariş yükleniyor...</div>
+    <div id="hudSelection">Seçim: -</div>
+    <div id="hudPayment">Ödeme: -</div>
+    <div id="hudRevenue">Toplam Ciro: 0 ₺</div>
+    <div id="hudQueue">Kuyruk: 0 / 4</div>
+    <div id="hudAudio">Ses: ilk tıklamada aktif olur</div>
+    <small>
+      Oyuncu dükkânda gezerken müşteriler de yürüyerek gelir. Her 5 saniyede bir yeni müşteri gelmeye çalışır.<br>
+      Aynı müşteri tipi ve aynı sipariş arka arkaya tekrar etmez. Bardak boş başlar, makine çalışınca dolarak hazırlanır.
+    </small>
+    <div>
+      <span class="pill">NPC Kuyruğu</span>
+      <span class="pill">5 sn spawn</span>
+      <span class="pill">Yürüme animasyonu</span>
+      <span class="pill">Nakit / Kart</span>
+      <span class="pill">Ses Efektleri</span>
+      <span class="pill">Tek ZIP</span>
+    </div>
+  </div>
+
+  <a-scene background="color: #d9ecff">
+    <a-assets>
+      <a-asset-item id="coffeeMachine" src="assets/models/CoffeeMachineDetailed.glb"></a-asset-item>
+      <a-asset-item id="blender" src="assets/models/kitchenBlender.glb"></a-asset-item>
+      <a-asset-item id="tableModel" src="assets/models/table.glb"></a-asset-item>
+      <a-asset-item id="chairModel" src="assets/models/chair.glb"></a-asset-item>
+      <a-asset-item id="trashcanModel" src="assets/models/trashcan.glb"></a-asset-item>
+      <a-asset-item id="plantModel" src="assets/models/plantSmall1.glb"></a-asset-item>
+      <a-asset-item id="speakerModel" src="assets/models/speaker.glb"></a-asset-item>
+      <a-asset-item id="barModel" src="assets/models/kitchenBar.glb"></a-asset-item>
+      <a-asset-item id="stoolModel" src="assets/models/stoolBar.glb"></a-asset-item>
+      <a-asset-item id="fridgeModel" src="assets/models/kitchenFridgeSmall.glb"></a-asset-item>
+      <a-asset-item id="bearModel" src="assets/models/bear.glb"></a-asset-item>
+      <a-asset-item id="cupModel" src="assets/models/CupTea.glb"></a-asset-item>
+      <a-asset-item id="posModel" src="assets/models/PrintingCalculator.glb"></a-asset-item>
+      <a-asset-item id="manModel" src="assets/models/Man.glb"></a-asset-item>
+      <a-asset-item id="adventurerModel" src="assets/models/Adventurer.glb"></a-asset-item>
+      <a-asset-item id="womanModel" src="assets/models/WomanCasual.glb"></a-asset-item>
+      <a-asset-item id="punkModel" src="assets/models/Punk.glb"></a-asset-item>
+      <a-asset-item id="businessModel" src="assets/models/BusinessMan.glb"></a-asset-item>
+      <a-asset-item id="sinkModel" src="assets/models/kitchenSink.glb"></a-asset-item>
+      <a-asset-item id="toiletModel" src="assets/models/toilet.glb"></a-asset-item>
+      <a-asset-item id="doorwayModel" src="assets/models/doorway.glb"></a-asset-item>
+      <a-asset-item id="wallWindowModel" src="assets/models/wallWindow.glb"></a-asset-item>
+      <a-asset-item id="washerModel" src="assets/models/washer.glb"></a-asset-item>
+    </a-assets>
+
+    <a-entity id="rig" position="0 0 8">
+      <a-camera position="0 1.6 0" wasd-controls="acceleration: 20" look-controls>
+        <a-cursor rayOrigin="mouse" fuse="false" material="color: #ffffff; shader: flat"></a-cursor>
+      </a-camera>
+      <a-entity laser-controls="hand: left" raycaster="objects: .clickable"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .clickable"></a-entity>
+    </a-entity>
+
+    <a-sky color="#d9ecff"></a-sky>
+    <a-plane position="0 0 -2" rotation="-90 0 0" width="28" height="28" color="#d8c3a5"></a-plane>
+    <a-plane position="0 6 -2" rotation="90 0 0" width="28" height="28" color="#fff7ed"></a-plane>
+    <a-plane position="0 3.2 -13" width="26" height="7" color="#f8fafc"></a-plane>
+    <a-plane position="-13 3.2 -2" rotation="0 90 0" width="26" height="7" color="#f1f5f9"></a-plane>
+    <a-plane position="13 3.2 -2" rotation="0 -90 0" width="26" height="7" color="#f1f5f9"></a-plane>
+
+    <a-entity light="type: ambient; intensity: 0.9"></a-entity>
+    <a-entity light="type: directional; intensity: 1" position="1 6 2"></a-entity>
+    <a-entity light="type: point; intensity: 0.55; distance: 20; color: #fff1c9" position="0 4 -6"></a-entity>
+
+    <a-plane position="0 4.95 -7.1" width="7.2" height="0.9" color="#8b4513"></a-plane>
+    <a-text value="VR Kahve Bar - NPC Kuyruk Sistemi" position="-3.2 4.76 -7.02" color="#fff7ed" width="6.6"></a-text>
+
+    <a-plane position="-7.7 3.3 -12.8" width="3.5" height="2.3" color="#1f2937"></a-plane>
+    <a-text value="MENU\nKucuk 30\nOrta 45\nBuyuk 60\nKahve / Sicak Cikolata / Blender" position="-9.25 4.05 -12.73" color="#f8fafc" width="3.1"></a-text>
+
+    <a-box position="0 1.1 -7" depth="1.8" height="1" width="7.6" color="#7c4a2d"></a-box>
+    <a-box position="0 1.62 -7.52" depth="0.2" height="0.16" width="7.75" color="#a16207"></a-box>
+    <a-box position="0 0.45 -8.2" depth="0.3" height="0.3" width="7.2" color="#5b3a29"></a-box>
+    <a-entity gltf-model="#barModel" position="0 0 -7.2" scale="3 3 3"></a-entity>
+
+    <a-entity id="machineArea" position="-1.95 1.13 -6.57" rotation="0 32 0">
+      <a-entity gltf-model="#coffeeMachine" scale="0.95 0.95 0.95"></a-entity>
+      <a-sphere position="0.04 0.5 0.18" radius="0.055" color="#22c55e" emissive="#14532d"></a-sphere>
+      <a-cylinder id="coffeeStream" position="0.08 0.18 0.04" radius="0.018" height="0.02" color="#5b341d" visible="false"></a-cylinder>
+    </a-entity>
+
+    <a-entity gltf-model="#blender" position="-0.25 1.14 -6.72" scale="1.08 1.08 1.08" rotation="0 15 0"></a-entity>
+    <a-entity gltf-model="#posModel" position="1.95 1.13 -6.53" scale="0.24 0.24 0.24" rotation="0 -22 0"></a-entity>
+    <a-entity gltf-model="#speakerModel" position="4.2 1.05 -10.4" scale="1.2 1.2 1.2"></a-entity>
+    <a-entity gltf-model="#fridgeModel" position="4.85 0 -7.9" scale="1.85 1.85 1.85" rotation="0 -36 0"></a-entity>
+    <a-entity gltf-model="#trashcanModel" position="-5.2 0 -6.45" scale="1.4 1.4 1.4"></a-entity>
+    <a-entity gltf-model="#plantModel" position="-4.55 0 -9.7" scale="1.55 1.55 1.55"></a-entity>
+    <a-entity gltf-model="#bearModel" position="3.2 0 -8.75" scale="1.5 1.5 1.5" rotation="0 -25 0"></a-entity>
+    <a-text value="Maskot Ayicik" position="2.62 2 -8.75" color="#7c2d12" width="5"></a-text>
+
+    <a-entity gltf-model="#tableModel" position="-4.2 0 -2.4" scale="2.2 2.2 2.2"></a-entity>
+    <a-entity gltf-model="#chairModel" position="-5.45 0 -2.6" scale="1.5 1.5 1.5" rotation="0 40 0"></a-entity>
+    <a-entity gltf-model="#chairModel" position="-3.1 0 -1.85" scale="1.5 1.5 1.5" rotation="0 -120 0"></a-entity>
+    <a-entity gltf-model="#stoolModel" position="-1.95 0 -5.15" scale="1.5 1.5 1.5"></a-entity>
+    <a-entity gltf-model="#stoolModel" position="1.65 0 -5.15" scale="1.5 1.5 1.5"></a-entity>
+
+    <a-entity id="cupPreviewSmall" gltf-model="#cupModel" position="-2.45 1.16 -6.15" scale="0.55 0.55 0.55" rotation="0 18 0"></a-entity>
+    <a-entity id="cupPreviewMedium" gltf-model="#cupModel" position="-1.25 1.14 -6.1" scale="0.72 0.72 0.72" rotation="0 18 0"></a-entity>
+    <a-entity id="cupPreviewLarge" gltf-model="#cupModel" position="0.2 1.12 -6.06" scale="0.88 0.88 0.88" rotation="0 18 0"></a-entity>
+    <a-text value="Kucuk" position="-2.65 1.62 -6.03" color="#111827" width="2"></a-text>
+    <a-text value="Orta" position="-1.38 1.62 -5.98" color="#111827" width="2"></a-text>
+    <a-text value="Buyuk" position="0.02 1.62 -5.94" color="#111827" width="2"></a-text>
+
+    <a-entity id="brewCup" position="-1.78 1.14 -6.48" rotation="0 32 0" visible="true">
+      <a-entity id="brewCupModel" gltf-model="#cupModel" scale="0.62 0.62 0.62"></a-entity>
+      <a-cylinder id="cupLiquid" position="0 0.07 0" radius="0.06" height="0.02" scale="1 0.01 1" color="#5b341d"></a-cylinder>
+      <a-ring position="0 0.12 0" rotation="-90 0 0" radius-inner="0.046" radius-outer="0.065" color="#f8fafc"></a-ring>
+    </a-entity>
+
+    <a-entity id="npcZone"></a-entity>
+
+    <a-entity id="orderBoard" position="4.9 3 -8" rotation="0 -35 0">
+      <a-plane width="4.2" height="2.8" color="#0f172a"></a-plane>
+      <a-text id="orderText" value="Siparis bekleniyor" position="-1.85 1 0.02" color="#f8fafc" width="3.65"></a-text>
+    </a-entity>
+
+    <a-entity id="statusBoard" position="0 3.25 -5.2">
+      <a-plane width="6.2" height="1.35" color="#1e293b"></a-plane>
+      <a-text id="statusText" value="Hazir" position="-2.85 0.12 0.02" color="#f8fafc" width="5.7"></a-text>
+    </a-entity>
+
+    <a-entity id="sizePanel" position="-7.3 2.9 -7"></a-entity>
+    <a-entity id="basePanel" position="-7.3 1.55 -7"></a-entity>
+    <a-entity id="extraPanel" position="7.2 2.8 -7"></a-entity>
+    <a-entity id="actionPanel" position="0 0.95 -4.35"></a-entity>
+    <a-entity id="paymentPanel" position="0 1.95 -3.6"></a-entity>
+    <a-entity id="cashPanel" position="0 0.9 -3.6"></a-entity>
+
+    <a-entity id="restroomZone" position="9.2 0 -10.6">
+      <a-text value="Lavabo / Servis Alani" position="-1.5 3.4 0.2" color="#334155" width="4"></a-text>
+      <a-entity gltf-model="#doorwayModel" position="0 0 0" scale="1.6 1.6 1.6" rotation="0 -90 0"></a-entity>
+      <a-entity gltf-model="#sinkModel" position="-1.45 0 0.2" scale="1.3 1.3 1.3" rotation="0 180 0"></a-entity>
+      <a-entity gltf-model="#sinkModel" position="-2.3 0 0.2" scale="1.15 1.15 1.15" rotation="0 180 0"></a-entity>
+      <a-entity gltf-model="#toiletModel" position="-0.15 0 0.3" scale="1.15 1.15 1.15" rotation="0 165 0"></a-entity>
+      <a-entity gltf-model="#washerModel" position="1.35 0 0.2" scale="1.3 1.3 1.3" rotation="0 180 0"></a-entity>
+      <a-box position="-0.4 1.2 -1.1" width="4.4" height="2.4" depth="0.1" color="#dbeafe"></a-box>
+    </a-entity>
+
+    <a-entity gltf-model="#wallWindowModel" position="-8.7 0 -9.7" scale="1.9 1.9 1.9"></a-entity>
+    <a-entity gltf-model="#wallWindowModel" position="-5.4 0 -9.7" scale="1.9 1.9 1.9"></a-entity>
+    <a-entity gltf-model="#plantModel" position="-9.5 0 -11.1" scale="1.7 1.7 1.7"></a-entity>
+    <a-entity gltf-model="#plantModel" position="8.4 0 -11.2" scale="1.35 1.35 1.35"></a-entity>
+  </a-scene>
+
+  <script>
+    const GAME = {
+      spawnIntervalMs: 5000,
+      maxQueue: 4,
+      queuePositions: [
+        { x: 4.3, y: 0, z: -5.9 },
+        { x: 6.1, y: 0, z: -4.2 },
+        { x: 7.7, y: 0, z: -2.5 },
+        { x: 9.2, y: 0, z: -0.9 }
+      ],
+      entryPoint: { x: 11.7, y: 0, z: 3.8 },
+      exitPoint: { x: 12.3, y: 0, z: 6.8 },
+      sizes: [
+        { key: 'kucuk', label: 'Kucuk', price: 30, cupScale: 0.52, fillScale: 0.58, fillHeight: 0.05 },
+        { key: 'orta', label: 'Orta', price: 45, cupScale: 0.68, fillScale: 0.78, fillHeight: 0.072 },
+        { key: 'buyuk', label: 'Buyuk', price: 60, cupScale: 0.85, fillScale: 1.0, fillHeight: 0.092 }
+      ],
+      bases: [
+        { key: 'kahve', label: 'Kahve', price: 0, color: '#5b341d', brewTime: 2600, sound: 'coffee' },
+        { key: 'sicakCikolata', label: 'Sicak Cikolata', price: 10, color: '#6b2d16', brewTime: 3000, sound: 'chocolate' },
+        { key: 'blender', label: 'Blender Icecek', price: 15, color: '#b45309', brewTime: 2400, sound: 'blender' }
+      ],
+      extras: [
+        { key: 'sut', label: 'Sut', price: 5 },
+        { key: 'buz', label: 'Buz', price: 4 },
+        { key: 'karamel', label: 'Karamel', price: 7 },
+        { key: 'krema', label: 'Krema', price: 8 },
+        { key: 'vanilya', label: 'Vanilya', price: 6 },
+        { key: 'kurabiye', label: 'Kurabiye', price: 12 },
+        { key: 'tarcin', label: 'Tarcin', price: 4 },
+        { key: 'marshmallow', label: 'Marshmallow', price: 9 }
+      ],
+      cashOptions: [20, 50, 100, 200],
+      customerTypes: [
+        { id: 'man', label: 'Adam', asset: '#manModel', scale: '1.08 1.08 1.08', idle: 'HumanArmature|Man_Idle', walk: 'HumanArmature|Man_Walk' },
+        { id: 'woman', label: 'Kadın', asset: '#womanModel', scale: '1.08 1.08 1.08', idle: 'HumanArmature|Female_Idle', walk: 'HumanArmature|Female_Walk' },
+        { id: 'adventurer', label: 'Maceracı', asset: '#adventurerModel', scale: '1.0 1.0 1.0', idle: 'CharacterArmature|Idle', walk: 'CharacterArmature|Walk' },
+        { id: 'punk', label: 'Punk', asset: '#punkModel', scale: '1.0 1.0 1.0', idle: 'CharacterArmature|Idle', walk: 'CharacterArmature|Walk' },
+        { id: 'business', label: 'İş Adamı', asset: '#businessModel', scale: '1.0 1.0 1.0', idle: 'CharacterArmature|Idle', walk: 'CharacterArmature|Walk' }
+      ],
+      phrases: [
+        '{size} bir {base} alabilir miyim',
+        'Bana {size} {base} hazırlar mısın',
+        'Bir tane {size} {base} istiyorum',
+        '{size} boy {base} rica ediyorum',
+        'Bugün {size} bir {base} iyi gider'
+      ]
+    };
+
+    const state = {
+      totalRevenue: 0,
+      servedOrders: 0,
+      selectedSize: 'orta',
+      selectedBase: 'kahve',
+      selectedExtras: [],
+      phase: 'mixing',
+      pendingPaymentMethod: null,
+      paidCash: 0,
+      order: null,
+      isBrewing: false,
+      audioReady: false,
+      lastCustomerType: null,
+      lastOrderSignature: null,
+      nextCustomerId: 1,
+      queue: []
+    };
+
+    const orderText = document.getElementById('orderText');
+    const statusText = document.getElementById('statusText');
+    const hudCustomer = document.getElementById('hudCustomer');
+    const hudOrder = document.getElementById('hudOrder');
+    const hudSelection = document.getElementById('hudSelection');
+    const hudPayment = document.getElementById('hudPayment');
+    const hudRevenue = document.getElementById('hudRevenue');
+    const hudQueue = document.getElementById('hudQueue');
+    const hudAudio = document.getElementById('hudAudio');
+    const coffeeStream = document.getElementById('coffeeStream');
+    const cupLiquid = document.getElementById('cupLiquid');
+    const brewCupModel = document.getElementById('brewCupModel');
+    const machineArea = document.getElementById('machineArea');
+    const npcZone = document.getElementById('npcZone');
+
+    function getSize(key) { return GAME.sizes.find(x => x.key === key); }
+    function getBase(key) { return GAME.bases.find(x => x.key === key); }
+    function getExtra(key) { return GAME.extras.find(x => x.key === key); }
+    function currentCustomer() { return state.queue[0] || null; }
+    function orderSignature(order) { return `${order.size}|${order.base}|${[...order.extras].sort().join(',')}`; }
+
+    const audioEngine = {
+      ctx: null,
+      master: null,
+      init() {
+        if (this.ctx) return;
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        this.ctx = new AudioCtx();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.12;
+        this.master.connect(this.ctx.destination);
+        state.audioReady = true;
+        hudAudio.textContent = 'Ses: aktif';
+      },
+      now() { return this.ctx ? this.ctx.currentTime : 0; },
+      tone(freq, duration, type='sine', volume=.15, when=0) {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.now() + when);
+        gain.gain.setValueAtTime(.0001, this.now() + when);
+        gain.gain.exponentialRampToValueAtTime(volume, this.now() + when + .01);
+        gain.gain.exponentialRampToValueAtTime(.0001, this.now() + when + duration);
+        osc.connect(gain); gain.connect(this.master);
+        osc.start(this.now() + when); osc.stop(this.now() + when + duration + .02);
+      },
+      noise(duration, volume=.08, lowpass=1000, when=0) {
+        if (!this.ctx) return;
+        const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * duration, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * .6;
+        const source = this.ctx.createBufferSource();
+        const filter = this.ctx.createBiquadFilter();
+        const gain = this.ctx.createGain();
+        source.buffer = buffer; filter.type = 'lowpass'; filter.frequency.value = lowpass;
+        gain.gain.setValueAtTime(.0001, this.now() + when);
+        gain.gain.linearRampToValueAtTime(volume, this.now() + when + .02);
+        gain.gain.linearRampToValueAtTime(.0001, this.now() + when + duration);
+        source.connect(filter); filter.connect(gain); gain.connect(this.master); source.start(this.now() + when);
+      },
+      click(){ this.tone(560,.08,'square',.08,0); this.tone(760,.04,'square',.05,.03); },
+      error(){ this.tone(220,.14,'sawtooth',.09,0); this.tone(170,.18,'sawtooth',.06,.08); },
+      success(){ this.tone(660,.12,'triangle',.08,0); this.tone(880,.14,'triangle',.07,.12); this.tone(1100,.18,'triangle',.06,.22); },
+      card(){ this.tone(1040,.06,'square',.07,0); this.tone(1320,.08,'square',.06,.09); },
+      cash(){ this.tone(420,.07,'triangle',.06,0); this.tone(520,.08,'triangle',.06,.09); },
+      change(){ this.tone(950,.05,'triangle',.05,0); this.tone(1280,.05,'triangle',.05,.07); this.tone(1510,.05,'triangle',.04,.13); },
+      arrive(){ this.tone(500,.09,'triangle',.05,0); this.tone(690,.11,'triangle',.05,.07); },
+      leave(){ this.tone(660,.06,'triangle',.05,0); this.tone(540,.07,'triangle',.04,.08); },
+      coffeeLoop(duration=2.4){ this.tone(120,duration,'sawtooth',.035,0); this.tone(145,duration,'triangle',.03,0); this.noise(duration,.04,800,0); },
+      chocolateLoop(duration=2.7){ this.tone(110,duration,'triangle',.03,0); this.noise(duration,.05,650,0); },
+      blenderLoop(duration=2.3){
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(180, this.now());
+        osc.frequency.linearRampToValueAtTime(260, this.now() + duration * .5);
+        osc.frequency.linearRampToValueAtTime(210, this.now() + duration);
+        gain.gain.setValueAtTime(.0001, this.now());
+        gain.gain.linearRampToValueAtTime(.045, this.now() + .08);
+        gain.gain.linearRampToValueAtTime(.0001, this.now() + duration);
+        osc.connect(gain); gain.connect(this.master); osc.start(); osc.stop(this.now() + duration + .05);
+        this.noise(duration,.025,1200,0);
+      }
+    };
+
+    function ensureAudio() {
+      if (!state.audioReady) audioEngine.init();
+      if (audioEngine.ctx && audioEngine.ctx.state === 'suspended') audioEngine.ctx.resume();
+    }
+
+    function selectionPrice() {
+      return getSize(state.selectedSize).price + getBase(state.selectedBase).price + state.selectedExtras.reduce((sum, key) => sum + getExtra(key).price, 0);
+    }
+
+    function orderPrice(order) {
+      if (!order) return 0;
+      return getSize(order.size).price + getBase(order.base).price + order.extras.reduce((s, key) => s + getExtra(key).price, 0);
+    }
+
+    function resetCupVisual() {
+      const size = getSize(state.selectedSize);
+      const base = getBase(state.selectedBase);
+      brewCupModel.setAttribute('scale', `${size.cupScale} ${size.cupScale} ${size.cupScale}`);
+      cupLiquid.setAttribute('color', base.color);
+      cupLiquid.setAttribute('position', `0 ${size.fillHeight / 2} 0`);
+      cupLiquid.setAttribute('scale', `${size.fillScale} 0.01 ${size.fillScale}`);
+      coffeeStream.setAttribute('visible', false);
+      coffeeStream.setAttribute('height', 0.02);
+    }
+
+    function setStatus(message) { statusText.setAttribute('value', message); }
+
+    function readableSelection() {
+      const extras = state.selectedExtras.length ? state.selectedExtras.map(k => getExtra(k).label).join(', ') : 'Ekstra yok';
+      return `${getSize(state.selectedSize).label} / ${getBase(state.selectedBase).label} / ${extras} / ${selectionPrice()} ₺`;
+    }
+
+    function extrasText(extras) {
+      return extras.length ? extras.map(k => getExtra(k).label).join(', ') : 'Ekstra yok';
+    }
+
+    function customerOrderLine(order) {
+      return `${getSize(order.size).label} ${getBase(order.base).label}` + (order.extras.length ? ` + ${extrasText(order.extras)}` : '');
+    }
+
+    function customerPhrase(order) {
+      const phrase = GAME.phrases[Math.floor(Math.random() * GAME.phrases.length)];
+      const extras = order.extras.length ? `, ${extrasText(order.extras)} ile` : '';
+      return phrase.replace('{size}', getSize(order.size).label.toLowerCase()).replace('{base}', getBase(order.base).label.toLowerCase()) + extras;
+    }
+
+    function readableOrder() {
+      const customer = currentCustomer();
+      if (!customer) return 'Müşteri yok\n5 saniyede bir yeni müşteri geliyor';
+      return `Müşteri: ${customer.type.label}\nİstek: ${customer.phrase}\nBoy: ${getSize(customer.order.size).label}\nİçecek: ${getBase(customer.order.base).label}\nEkstralar: ${extrasText(customer.order.extras)}\nTutar: ${orderPrice(customer.order)} ₺`;
+    }
+
+    function paymentReadable() {
+      if (!currentCustomer()) return 'Müşteri bekleniyor';
+      if (state.phase === 'mixing') return 'Ödeme aşamasına geçilmedi';
+      if (state.phase === 'brewing') return 'Makine çalışıyor, bardak doluyor';
+      if (state.pendingPaymentMethod === 'card') return `Kart ödemesi bekleniyor / Tutar: ${orderPrice(state.order)} ₺`;
+      if (state.pendingPaymentMethod === 'cash') return `Nakit alındı: ${state.paidCash} ₺ / Gerekli: ${orderPrice(state.order)} ₺`;
+      return `Ödeme yöntemi seç / Tutar: ${orderPrice(state.order)} ₺`;
+    }
+
+    function updateCurrentOrderFromQueue() {
+      const customer = currentCustomer();
+      state.order = customer ? customer.order : null;
+      if (!customer) {
+        state.phase = 'mixing';
+        state.pendingPaymentMethod = null;
+        state.paidCash = 0;
+      }
+    }
+
+    function updateUI() {
+      updateCurrentOrderFromQueue();
+      const customer = currentCustomer();
+      orderText.setAttribute('value', readableOrder());
+      hudCustomer.textContent = `Müşteri: ${customer ? customer.type.label : 'bekleniyor'}`;
+      hudOrder.textContent = readableOrder().replace(/\n/g, ' | ');
+      hudSelection.textContent = `Seçim: ${readableSelection()}`;
+      hudPayment.textContent = `Ödeme: ${paymentReadable()}`;
+      hudRevenue.textContent = `Toplam Ciro: ${state.totalRevenue} ₺ | Tamamlanan Sipariş: ${state.servedOrders}`;
+      hudQueue.textContent = `Kuyruk: ${state.queue.length} / ${GAME.maxQueue}`;
+      refreshButtons();
+      document.getElementById('paymentPanel').setAttribute('visible', state.phase === 'payment');
+      document.getElementById('cashPanel').setAttribute('visible', state.phase === 'payment' && state.pendingPaymentMethod === 'cash');
+    }
+
+    const buttonRefs = [];
+    function makeButton(parent, { x, y, label, action, value, width = 1.05, color = '#334155' }) {
+      const wrap = document.createElement('a-entity');
+      wrap.setAttribute('position', `${x} ${y} 0`);
+      const box = document.createElement('a-box');
+      box.setAttribute('width', width);
+      box.setAttribute('height', 0.38);
+      box.setAttribute('depth', 0.12);
+      box.setAttribute('class', 'clickable');
+      box.setAttribute('color', color);
+      box.setAttribute('data-action', action);
+      box.setAttribute('data-value', value);
+      box.setAttribute('animation__enter', 'property: scale; startEvents: mouseenter; to: 1.05 1.05 1.05; dur: 80');
+      box.setAttribute('animation__leave', 'property: scale; startEvents: mouseleave; to: 1 1 1; dur: 80');
+      box.addEventListener('click', onButtonClick);
+      const text = document.createElement('a-text');
+      text.setAttribute('value', label);
+      text.setAttribute('align', 'center');
+      text.setAttribute('color', '#f8fafc');
+      text.setAttribute('width', width * 2.2);
+      text.setAttribute('position', '0 -0.03 0.08');
+      wrap.appendChild(box); wrap.appendChild(text); parent.appendChild(wrap);
+      buttonRefs.push({ box, action, value, defaultColor: color });
+    }
+
+    function addPanelTitle(parent, textValue) {
+      const title = document.createElement('a-text');
+      title.setAttribute('value', textValue);
+      title.setAttribute('color', '#0f172a');
+      title.setAttribute('width', 4.3);
+      title.setAttribute('position', '-1.45 0.5 0');
+      parent.appendChild(title);
+    }
+
+    function buildPanels() {
+      const sizePanel = document.getElementById('sizePanel');
+      const basePanel = document.getElementById('basePanel');
+      const extraPanel = document.getElementById('extraPanel');
+      const actionPanel = document.getElementById('actionPanel');
+      const paymentPanel = document.getElementById('paymentPanel');
+      const cashPanel = document.getElementById('cashPanel');
+
+      addPanelTitle(sizePanel, 'Boy Seç');
+      GAME.sizes.forEach((item, i) => makeButton(sizePanel, { x: 0, y: -i * 0.52, label: `${item.label} (${item.price}₺)`, action: 'size', value: item.key, width: 1.55, color: '#2563eb' }));
+      addPanelTitle(basePanel, 'İçecek');
+      GAME.bases.forEach((item, i) => makeButton(basePanel, { x: 0, y: -i * 0.52, label: `${item.label} (+${item.price}₺)`, action: 'base', value: item.key, width: 1.8, color: '#7c3aed' }));
+      addPanelTitle(extraPanel, 'Ekstralar');
+      GAME.extras.forEach((item, i) => {
+        const col = i % 2, row = Math.floor(i / 2);
+        makeButton(extraPanel, { x: col * 1.55 - 0.8, y: -row * 0.5, label: `${item.label} (+${item.price}₺)`, action: 'extra', value: item.key, width: 1.35, color: '#059669' });
+      });
+      makeButton(actionPanel, { x: -2.2, y: 0, label: 'Hazırla', action: 'prepare', value: 'prepare', width: 1.35, color: '#b45309' });
+      makeButton(actionPanel, { x: -0.55, y: 0, label: 'Sıfırla', action: 'reset', value: 'reset', width: 1.22, color: '#475569' });
+      makeButton(actionPanel, { x: 1.05, y: 0, label: 'Kart', action: 'payment', value: 'card', width: 1.1, color: '#1d4ed8' });
+      makeButton(actionPanel, { x: 2.5, y: 0, label: 'Nakit', action: 'payment', value: 'cash', width: 1.1, color: '#15803d' });
+      addPanelTitle(paymentPanel, 'Ödeme İşlemleri');
+      makeButton(paymentPanel, { x: -1.8, y: -0.2, label: 'Kart Çek', action: 'confirm-card', value: 'card', width: 1.35, color: '#0f766e' });
+      makeButton(paymentPanel, { x: 0, y: -0.2, label: 'Para Üstü', action: 'show-change', value: 'change', width: 1.35, color: '#7c2d12' });
+      makeButton(paymentPanel, { x: 1.8, y: -0.2, label: 'Yeni Sıradaki', action: 'next-order', value: 'next', width: 1.5, color: '#4338ca' });
+      addPanelTitle(cashPanel, 'Banknot Ekle');
+      GAME.cashOptions.forEach((cash, i) => makeButton(cashPanel, { x: i * 1.25 - 1.9, y: -0.2, label: `${cash}₺`, action: 'cash', value: String(cash), width: 1, color: '#166534' }));
+    }
+
+    function refreshButtons() {
+      buttonRefs.forEach(ref => {
+        let color = ref.defaultColor;
+        if (ref.action === 'size' && state.selectedSize === ref.value) color = '#f59e0b';
+        if (ref.action === 'base' && state.selectedBase === ref.value) color = '#f59e0b';
+        if (ref.action === 'extra' && state.selectedExtras.includes(ref.value)) color = '#f59e0b';
+        if (ref.action === 'payment' && state.pendingPaymentMethod === ref.value) color = '#f59e0b';
+        if (state.isBrewing && ['prepare', 'payment', 'cash', 'confirm-card'].includes(ref.action)) color = '#64748b';
+        ref.box.setAttribute('color', color);
+      });
+    }
+
+    function sameSet(a, b) {
+      if (a.length !== b.length) return false;
+      return [...a].sort().join('|') === [...b].sort().join('|');
+    }
+
+    function selectionMatchesOrder() {
+      return state.order && state.selectedSize === state.order.size && state.selectedBase === state.order.base && sameSet(state.selectedExtras, state.order.extras);
+    }
+
+    function chooseUniqueOrder() {
+      let attempts = 0;
+      while (attempts < 40) {
+        attempts += 1;
+        const extraCount = Math.floor(Math.random() * 3);
+        const shuffled = [...GAME.extras].sort(() => Math.random() - 0.5);
+        const order = {
+          size: GAME.sizes[Math.floor(Math.random() * GAME.sizes.length)].key,
+          base: GAME.bases[Math.floor(Math.random() * GAME.bases.length)].key,
+          extras: shuffled.slice(0, extraCount).map(x => x.key)
+        };
+        const sig = orderSignature(order);
+        if (sig !== state.lastOrderSignature) {
+          state.lastOrderSignature = sig;
+          return order;
+        }
+      }
+      return { size: 'orta', base: 'kahve', extras: [] };
+    }
+
+    function chooseUniqueCustomerType() {
+      let attempts = 0;
+      while (attempts < 20) {
+        attempts += 1;
+        const type = GAME.customerTypes[Math.floor(Math.random() * GAME.customerTypes.length)];
+        if (type.id !== state.lastCustomerType) {
+          state.lastCustomerType = type.id;
+          return type;
+        }
+      }
+      return GAME.customerTypes[0];
+    }
+
+    function createCustomerEntity(customer) {
+      const root = document.createElement('a-entity');
+      root.setAttribute('position', `${GAME.entryPoint.x} ${GAME.entryPoint.y} ${GAME.entryPoint.z}`);
+      root.setAttribute('rotation', '0 180 0');
+      root.setAttribute('id', customer.id);
+
+      const model = document.createElement('a-entity');
+      model.setAttribute('gltf-model', customer.type.asset);
+      model.setAttribute('scale', customer.type.scale);
+      model.setAttribute('animation-mixer', `clip: ${customer.type.idle}; loop: repeat; timeScale: 1`);
+      root.appendChild(model);
+
+      const bubble = document.createElement('a-entity');
+      bubble.setAttribute('position', '0 2.45 0');
+      const bubbleBg = document.createElement('a-plane');
+      bubbleBg.setAttribute('width', 2.4);
+      bubbleBg.setAttribute('height', 0.95);
+      bubbleBg.setAttribute('color', '#ffffff');
+      bubbleBg.setAttribute('opacity', '0.9');
+      const bubbleText = document.createElement('a-text');
+      bubbleText.setAttribute('value', customer.phrase);
+      bubbleText.setAttribute('width', '2.15');
+      bubbleText.setAttribute('color', '#0f172a');
+      bubbleText.setAttribute('align', 'center');
+      bubbleText.setAttribute('position', '-1.05 0.15 0.02');
+      bubble.appendChild(bubbleBg);
+      bubble.appendChild(bubbleText);
+      root.appendChild(bubble);
+
+      const handCup = document.createElement('a-entity');
+      handCup.setAttribute('visible', 'false');
+      handCup.setAttribute('position', '0.26 1.03 0.16');
+      handCup.setAttribute('rotation', '0 15 0');
+      const handCupModel = document.createElement('a-entity');
+      handCupModel.setAttribute('gltf-model', '#cupModel');
+      handCupModel.setAttribute('scale', '0.24 0.24 0.24');
+      const handCupLiquid = document.createElement('a-cylinder');
+      handCupLiquid.setAttribute('position', '0 0.03 0');
+      handCupLiquid.setAttribute('radius', '0.026');
+      handCupLiquid.setAttribute('height', '0.04');
+      handCupLiquid.setAttribute('color', getBase(customer.order.base).color);
+      handCup.appendChild(handCupModel);
+      handCup.appendChild(handCupLiquid);
+      root.appendChild(handCup);
+
+      npcZone.appendChild(root);
+      customer.el = root;
+      customer.modelEl = model;
+      customer.bubbleTextEl = bubbleText;
+      customer.bubbleBgEl = bubbleBg;
+      customer.handCupEl = handCup;
+    }
+
+    function setCustomerAnimation(customer, clip) {
+      if (!customer || !customer.modelEl) return;
+      customer.modelEl.setAttribute('animation-mixer', `clip: ${clip}; loop: repeat; timeScale: 1`);
+    }
+
+    function faceTarget(customer, target) {
+      const pos = customer.el.object3D.position;
+      const dx = target.x - pos.x;
+      const dz = target.z - pos.z;
+      const yaw = Math.atan2(dx, dz) * 180 / Math.PI;
+      customer.el.setAttribute('rotation', `0 ${yaw} 0`);
+    }
+
+    function moveCustomerTo(customer, target, onDone) {
+      if (!customer || !customer.el) return;
+      const pos = customer.el.object3D.position;
+      const dx = target.x - pos.x, dz = target.z - pos.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      const duration = Math.max(900, dist * 900);
+      faceTarget(customer, target);
+      setCustomerAnimation(customer, customer.type.walk);
+      customer.el.removeAttribute('animation__move');
+      requestAnimationFrame(() => {
+        customer.el.setAttribute('animation__move', `property: position; to: ${target.x} ${target.y} ${target.z}; dur: ${duration}; easing: linear`);
+      });
+      const done = () => {
+        customer.el.removeEventListener('animationcomplete__move', done);
+        setCustomerAnimation(customer, customer.type.idle);
+        if (onDone) onDone();
+      };
+      customer.el.addEventListener('animationcomplete__move', done);
+    }
+
+    function updateBubbleVisibility() {
+      state.queue.forEach((customer, index) => {
+        if (!customer.bubbleBgEl) return;
+        customer.bubbleBgEl.setAttribute('color', index === 0 ? '#ffffff' : '#dbeafe');
+        customer.bubbleBgEl.setAttribute('opacity', index === 0 ? '0.94' : '0.85');
+      });
+    }
+
+    function advanceQueuePositions() {
+      state.queue.forEach((customer, index) => moveCustomerTo(customer, GAME.queuePositions[index]));
+      updateBubbleVisibility();
+      updateUI();
+    }
+
+    function spawnCustomer() {
+      if (state.queue.length >= GAME.maxQueue) return;
+      const type = chooseUniqueCustomerType();
+      const order = chooseUniqueOrder();
+      const customer = {
+        id: `customer-${state.nextCustomerId++}`,
+        type,
+        order,
+        phrase: customerPhrase(order),
+        state: 'entering'
+      };
+      createCustomerEntity(customer);
+      state.queue.push(customer);
+      const queueIndex = state.queue.length - 1;
+      moveCustomerTo(customer, GAME.queuePositions[queueIndex], () => {
+        customer.state = 'waiting';
+        setCustomerAnimation(customer, customer.type.idle);
+        if (queueIndex === 0) setStatus(`${customer.type.label} tezgâha geldi: ${customerOrderLine(customer.order)}`);
+        updateUI();
+      });
+      audioEngine.arrive();
+      updateBubbleVisibility();
+      updateUI();
+    }
+
+    function removeFrontCustomerWithDrink() {
+      const customer = state.queue.shift();
+      if (!customer) return;
+      customer.handCupEl.setAttribute('visible', 'true');
+      customer.bubbleTextEl.setAttribute('value', 'Teşekkürler!');
+      audioEngine.leave();
+      moveCustomerTo(customer, GAME.exitPoint, () => {
+        if (customer.el && customer.el.parentNode) customer.el.parentNode.removeChild(customer.el);
+      });
+      advanceQueuePositions();
+    }
+
+    function animateLiquid(base, size, duration) {
+      resetCupVisual();
+      cupLiquid.setAttribute('color', base.color);
+      brewCupModel.setAttribute('scale', `${size.cupScale} ${size.cupScale} ${size.cupScale}`);
+      coffeeStream.setAttribute('visible', true);
+      coffeeStream.setAttribute('height', 0.32 + size.fillHeight * 2.4);
+      machineArea.setAttribute('animation__shake', 'property: rotation; from: 0 32 0; to: 0 35 0; dir: alternate; loop: true; dur: 120');
+      const start = performance.now();
+      const liquidTarget = size.fillScale;
+      function frame(now) {
+        const progress = Math.min(1, (now - start) / duration);
+        const yScale = 0.01 + progress * 0.99;
+        cupLiquid.setAttribute('scale', `${liquidTarget} ${yScale} ${liquidTarget}`);
+        cupLiquid.setAttribute('position', `0 ${size.fillHeight * progress / 2} 0`);
+        if (progress < 1) requestAnimationFrame(frame);
+        else {
+          coffeeStream.setAttribute('visible', false);
+          machineArea.removeAttribute('animation__shake');
+          machineArea.setAttribute('rotation', '0 32 0');
+        }
+      }
+      requestAnimationFrame(frame);
+    }
+
+    function startBrewingSequence() {
+      const customer = currentCustomer();
+      if (!customer) {
+        audioEngine.error();
+        setStatus('Önce müşteri gelsin.');
+        updateUI();
+        return;
+      }
+      const base = getBase(state.selectedBase);
+      const size = getSize(state.selectedSize);
+      state.phase = 'brewing';
+      state.isBrewing = true;
+      state.pendingPaymentMethod = null;
+      state.paidCash = 0;
+      setStatus(`${customer.type.label} için makine çalıştı. Bardak boş başladı, şimdi doluyor...`);
+      updateUI();
+      ensureAudio();
+      if (base.sound === 'coffee') audioEngine.coffeeLoop(base.brewTime / 1000);
+      if (base.sound === 'chocolate') audioEngine.chocolateLoop(base.brewTime / 1000);
+      if (base.sound === 'blender') audioEngine.blenderLoop(base.brewTime / 1000);
+      animateLiquid(base, size, base.brewTime);
+      setTimeout(() => {
+        state.phase = 'payment';
+        state.isBrewing = false;
+        setStatus(`İçecek hazır. Bardak doldu. Şimdi ödemeyi al: ${orderPrice(state.order)} ₺`);
+        audioEngine.success();
+        updateUI();
+      }, base.brewTime + 50);
+    }
+
+    function completeOrder(method) {
+      const customer = currentCustomer();
+      if (!customer) return;
+      const total = orderPrice(customer.order);
+      state.totalRevenue += total;
+      state.servedOrders += 1;
+      const extraNote = method === 'cash' ? ` Para üstü: ${Math.max(0, state.paidCash - total)} ₺.` : ' Kart başarılı.';
+      if (method === 'cash') { audioEngine.cash(); audioEngine.change(); }
+      else { audioEngine.card(); }
+      setStatus(`${customer.type.label} siparişi aldı. ${total} ₺ tahsil edildi.${extraNote}`);
+      removeFrontCustomerWithDrink();
+      resetSelection();
+      state.phase = 'mixing';
+      state.pendingPaymentMethod = null;
+      state.paidCash = 0;
+      updateUI();
+    }
+
+    function onButtonClick(event) {
+      ensureAudio();
+      audioEngine.click();
+      const el = event.currentTarget;
+      const action = el.getAttribute('data-action');
+      const value = el.getAttribute('data-value');
+
+      if (state.isBrewing && !['next-order'].includes(action)) {
+        setStatus('Makine şu an çalışıyor. Bardak dolunca ödemeye geçeceksin.');
+        updateUI();
+        return;
+      }
+
+      switch (action) {
+        case 'size':
+          state.selectedSize = value; resetCupVisual(); setStatus(`${getSize(value).label} bardak seçildi.`); break;
+        case 'base':
+          state.selectedBase = value; resetCupVisual(); setStatus(`${getBase(value).label} seçildi.`); break;
+        case 'extra':
+          if (state.selectedExtras.includes(value)) { state.selectedExtras = state.selectedExtras.filter(x => x !== value); setStatus(`${getExtra(value).label} çıkartıldı.`); }
+          else { state.selectedExtras.push(value); setStatus(`${getExtra(value).label} eklendi.`); }
+          break;
+        case 'reset':
+          resetSelection(); setStatus('Seçimler sıfırlandı.'); break;
+        case 'prepare':
+          if (!currentCustomer()) { audioEngine.error(); setStatus('Tezgahta müşteri yok. 5 saniye içinde biri gelir.'); break; }
+          if (selectionMatchesOrder()) { startBrewingSequence(); return; }
+          audioEngine.error(); setStatus('Tarif eşleşmedi. Ceza yok; düzeltip tekrar Hazırla.'); break;
+        case 'payment':
+          if (state.phase !== 'payment') { audioEngine.error(); setStatus('Önce siparişi doğru hazırlamalısın.'); }
+          else { state.pendingPaymentMethod = value; state.paidCash = 0; setStatus(value === 'card' ? 'Kart ödemesi hazır. Kart Çek butonuna bas.' : 'Nakit ödemede banknot ekle.'); }
+          break;
+        case 'confirm-card':
+          if (state.phase === 'payment' && state.pendingPaymentMethod === 'card') { completeOrder('card'); return; }
+          audioEngine.error(); setStatus('Önce Kart seç.'); break;
+        case 'cash':
+          if (state.phase === 'payment' && state.pendingPaymentMethod === 'cash') {
+            state.paidCash += Number(value); audioEngine.cash();
+            const total = orderPrice(state.order);
+            if (state.paidCash >= total) { completeOrder('cash'); return; }
+            setStatus(`Nakit alındı: ${state.paidCash} ₺. Gerekli tutar: ${total} ₺`);
+          } else { audioEngine.error(); setStatus('Önce Nakit seç.'); }
+          break;
+        case 'show-change':
+          if (state.phase === 'payment' && state.pendingPaymentMethod === 'cash') {
+            const total = orderPrice(state.order), diff = Math.max(0, state.paidCash - total);
+            audioEngine.change(); setStatus(`Anlık para üstü: ${diff} ₺`);
+          } else { audioEngine.error(); setStatus('Para üstü görmek için Nakit seç ve banknot ekle.'); }
+          break;
+        case 'next-order':
+          setStatus(currentCustomer() ? 'Sıradaki müşteri tezgahta.' : 'Şu an tezgahta müşteri yok.');
+          break;
+      }
+      updateUI();
+    }
+
+    buildPanels();
+    resetSelection();
+    updateUI();
+    spawnCustomer();
+    setInterval(spawnCustomer, GAME.spawnIntervalMs);
+  </script>
+</body>
+</html>
